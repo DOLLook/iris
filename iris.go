@@ -60,6 +60,7 @@ type Application struct {
 	*router.Router
 	router.HTTPErrorHandler // if Router is Downgraded this is nil.
 	ContextPool             *context.Pool
+	ResponseWriterPool      *context.ResponseWriterPool
 	// See SetContextErrorHandler, defaults to nil.
 	contextErrorHandler context.ErrorHandler
 
@@ -130,6 +131,9 @@ func New() *Application {
 	app.APIBuilder = router.NewAPIBuilder(logger)
 	app.ContextPool = context.New(func() interface{} {
 		return context.NewContext(app)
+	})
+	app.ResponseWriterPool = context.NewResponseWriterPool(func() interface{} {
+		return context.NewResponseWriter()
 	})
 
 	context.RegisterApplication(app)
@@ -437,6 +441,14 @@ func (app *Application) View(writer io.Writer, filename string, layout string, b
 // is hijacked by a third-party middleware and the http handler return too fast.
 func (app *Application) GetContextPool() *context.Pool {
 	return app.ContextPool
+}
+
+// GetResponseWriterPool returns the Iris sync.Pool which holds the response writers.
+// Iris automatically releases the response writer, so you don't have to use it.
+// It's only useful to manually release the response writer on cases that connection
+// is hijacked by a third-party middleware and the http handler return too fast.
+func (app *Application) GetResponseWriterPool() *context.ResponseWriterPool {
+	return app.ResponseWriterPool
 }
 
 // SetContextErrorHandler can optionally register a handler to handle

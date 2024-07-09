@@ -34,7 +34,7 @@ type ResponseWriter interface {
 	// EndResponse is the last function which is called right before the server sent the final response.
 	//
 	// Here is the place which we can make the last checks or do a cleanup.
-	EndResponse()
+	EndResponse(pool *ResponseWriterPool)
 
 	// IsHijacked reports whether this response writer's connection is hijacked.
 	IsHijacked() bool
@@ -154,6 +154,10 @@ type responseWriter struct {
 	beforeFlush func()
 }
 
+func NewResponseWriter() *responseWriter {
+	return &responseWriter{}
+}
+
 var _ ResponseWriter = (*responseWriter)(nil)
 
 const (
@@ -188,8 +192,13 @@ func (w *responseWriter) SetWriter(underline http.ResponseWriter) {
 // EndResponse is the last function which is called right before the server sent the final response.
 //
 // Here is the place which we can make the last checks or do a cleanup.
-func (w *responseWriter) EndResponse() {
-	releaseResponseWriter(w)
+func (w *responseWriter) EndResponse(pool *ResponseWriterPool) {
+	//releaseResponseWriter(w)
+	if pool == nil {
+		releaseResponseWriter(w)
+	} else {
+		pool.Release(w)
+	}
 }
 
 // Reset clears headers, sets the status code to 200

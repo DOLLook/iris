@@ -226,7 +226,13 @@ func (ctx *Context) BeginRequest(w http.ResponseWriter, r *http.Request) {
 	ctx.currentHandlerIndex = 0
 	ctx.proceeded = 0
 	ctx.manualRelease = false
-	ctx.writer = AcquireResponseWriter()
+	//ctx.writer = AcquireResponseWriter()
+	rPool := ctx.Application().GetResponseWriterPool()
+	if rPool == nil {
+		ctx.writer = AcquireResponseWriter()
+	} else {
+		ctx.writer = rPool.Acquire()
+	}
 	ctx.writer.BeginResponse(w)
 }
 
@@ -243,7 +249,7 @@ func (ctx *Context) EndRequest() {
 	}
 
 	ctx.writer.FlushResponse()
-	ctx.writer.EndResponse()
+	ctx.writer.EndResponse(ctx.Application().GetResponseWriterPool())
 }
 
 // DisablePoolRelease disables the auto context pool Put call.

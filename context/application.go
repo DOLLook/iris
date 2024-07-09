@@ -52,6 +52,12 @@ type Application interface {
 	// is hijacked by a third-party middleware and the http handler return too fast.
 	GetContextPool() *Pool
 
+	// GetResponseWriterPool returns the Iris sync.Pool which holds the response writers.
+	// Iris automatically releases the response writer, so you don't have to use it.
+	// It's only useful to manually release the response writer on cases that connection
+	// is hijacked by a third-party middleware and the http handler return too fast.
+	GetResponseWriterPool() *ResponseWriterPool
+
 	// GetContextErrorHandler returns the handler which handles errors
 	// on JSON write failures.
 	GetContextErrorHandler() ErrorHandler

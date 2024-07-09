@@ -63,9 +63,14 @@ func (w *ResponseRecorder) BeginRecord(underline ResponseWriter) {
 
 // EndResponse is auto-called when the whole client's request is done,
 // releases the response recorder and its underline ResponseWriter.
-func (w *ResponseRecorder) EndResponse() {
-	w.ResponseWriter.EndResponse()
-	releaseResponseRecorder(w)
+func (w *ResponseRecorder) EndResponse(pool *ResponseWriterPool) {
+	w.ResponseWriter.EndResponse(pool)
+	//releaseResponseRecorder(w)
+	if pool == nil {
+		releaseResponseRecorder(w)
+	} else {
+		pool.Release(w)
+	}
 }
 
 // Write Adds the contents to the body reply, it writes the contents temporarily

@@ -369,5 +369,5 @@ func benchmarkAccessLogAfter(b *testing.B, withLogStruct, async bool) {
 	if async {
 		wg.Wait()
 	}
-	w.EndResponse()
+	w.EndResponse(nil)
 }

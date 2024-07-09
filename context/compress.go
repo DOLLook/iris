@@ -296,9 +296,14 @@ func (w *CompressResponseWriter) FlushHeaders() {
 }
 
 // EndResponse reeases the writers.
-func (w *CompressResponseWriter) EndResponse() {
-	w.ResponseWriter.EndResponse()
-	releaseCompressResponseWriter(w)
+func (w *CompressResponseWriter) EndResponse(pool *ResponseWriterPool) {
+	w.ResponseWriter.EndResponse(pool)
+	//releaseCompressResponseWriter(w)
+	if pool == nil {
+		releaseCompressResponseWriter(w)
+	} else {
+		pool.Release(w)
+	}
 }
 
 func (w *CompressResponseWriter) Write(p []byte) (int, error) {
