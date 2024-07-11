@@ -21,12 +21,27 @@ var rrpool = sync.Pool{New: func() interface{} { return &ResponseRecorder{} }}
 
 // AcquireResponseRecorder returns a new *AcquireResponseRecorder from the pool.
 // Releasing is done automatically when request and response is done.
-func AcquireResponseRecorder() *ResponseRecorder {
-	return rrpool.Get().(*ResponseRecorder)
+func AcquireResponseRecorder(ctx *Context) *ResponseRecorder {
+	// return rrpool.Get().(*ResponseRecorder)
+
+	var recorder *ResponseRecorder
+	appPool := ctx.Application().GetResponseRecorderPool()
+	if appPool == nil {
+		recorder = rrpool.Get().(*ResponseRecorder)
+	} else {
+		recorder = appPool.Acquire().(*ResponseRecorder)
+	}
+	return recorder
 }
 
-func releaseResponseRecorder(w *ResponseRecorder) {
-	rrpool.Put(w)
+func releaseResponseRecorder(ctx *Context, w *ResponseRecorder) {
+	// rrpool.Put(w)
+	appPool := ctx.Application().GetResponseRecorderPool()
+	if appPool == nil {
+		rrpool.Put(w)
+	} else {
+		appPool.Release(w)
+	}
 }
 
 // A ResponseRecorder is used mostly for testing
@@ -42,6 +57,10 @@ type ResponseRecorder struct {
 	headers http.Header
 
 	result *http.Response
+}
+
+func NewResponseRecorder() *ResponseRecorder {
+	return &ResponseRecorder{}
 }
 
 var _ ResponseWriter = (*ResponseRecorder)(nil)
@@ -63,14 +82,9 @@ func (w *ResponseRecorder) BeginRecord(underline ResponseWriter) {
 
 // EndResponse is auto-called when the whole client's request is done,
 // releases the response recorder and its underline ResponseWriter.
-func (w *ResponseRecorder) EndResponse(pool *ResponseWriterPool) {
-	w.ResponseWriter.EndResponse(pool)
-	//releaseResponseRecorder(w)
-	if pool == nil {
-		releaseResponseRecorder(w)
-	} else {
-		pool.Release(w)
-	}
+func (w *ResponseRecorder) EndResponse(ctx *Context) {
+	w.ResponseWriter.EndResponse(ctx)
+	releaseResponseRecorder(ctx, w)
 }
 
 // Write Adds the contents to the body reply, it writes the contents temporarily

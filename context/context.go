@@ -226,13 +226,7 @@ func (ctx *Context) BeginRequest(w http.ResponseWriter, r *http.Request) {
 	ctx.currentHandlerIndex = 0
 	ctx.proceeded = 0
 	ctx.manualRelease = false
-	//ctx.writer = AcquireResponseWriter()
-	rPool := ctx.Application().GetResponseWriterPool()
-	if rPool == nil {
-		ctx.writer = AcquireResponseWriter()
-	} else {
-		ctx.writer = rPool.Acquire()
-	}
+	ctx.writer = AcquireResponseWriter(ctx)
 	ctx.writer.BeginResponse(w)
 }
 
@@ -249,7 +243,7 @@ func (ctx *Context) EndRequest() {
 	}
 
 	ctx.writer.FlushResponse()
-	ctx.writer.EndResponse(ctx.Application().GetResponseWriterPool())
+	ctx.writer.EndResponse(ctx)
 }
 
 // DisablePoolRelease disables the auto context pool Put call.
@@ -482,7 +476,7 @@ func (ctx *Context) ResponseWriter() ResponseWriter {
 // ctx.ResponseWriter().SetWriter(http.ResponseWriter) instead.
 func (ctx *Context) ResetResponseWriter(newResponseWriter ResponseWriter) {
 	if rec, ok := ctx.IsRecording(); ok {
-		releaseResponseRecorder(rec)
+		releaseResponseRecorder(ctx, rec)
 	}
 
 	ctx.writer = newResponseWriter
@@ -3602,7 +3596,7 @@ func (ctx *Context) CompressWriter(enable bool) error {
 			// replace the recorder's response writer
 			// reference with that compressed one.
 			// Fixes an issue when Record is called before CompressWriter.
-			cw, err := AcquireCompressResponseWriter(w.ResponseWriter, ctx.request, -1)
+			cw, err := AcquireCompressResponseWriter(ctx, w.ResponseWriter, ctx.request, -1)
 			if err != nil {
 				return err
 			}
@@ -3618,7 +3612,7 @@ func (ctx *Context) CompressWriter(enable bool) error {
 			return nil
 		}
 
-		cw, err := AcquireCompressResponseWriter(w, ctx.request, -1)
+		cw, err := AcquireCompressResponseWriter(ctx, w, ctx.request, -1)
 		if err != nil {
 			return err
 		}
@@ -6047,7 +6041,7 @@ func (ctx *Context) Record() {
 	switch w := ctx.writer.(type) {
 	case *ResponseRecorder:
 	default:
-		recorder := AcquireResponseRecorder()
+		recorder := AcquireResponseRecorder(ctx)
 		recorder.BeginRecord(w)
 		ctx.ResetResponseWriter(recorder)
 	}

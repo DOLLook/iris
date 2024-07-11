@@ -34,7 +34,7 @@ type ResponseWriter interface {
 	// EndResponse is the last function which is called right before the server sent the final response.
 	//
 	// Here is the place which we can make the last checks or do a cleanup.
-	EndResponse(pool *ResponseWriterPool)
+	EndResponse(ctx *Context)
 
 	// IsHijacked reports whether this response writer's connection is hijacked.
 	IsHijacked() bool
@@ -131,12 +131,26 @@ var rpool = sync.Pool{New: func() interface{} { return &responseWriter{} }}
 
 // AcquireResponseWriter returns a new *ResponseWriter from the pool.
 // Releasing is done automatically when request and response is done.
-func AcquireResponseWriter() ResponseWriter {
-	return rpool.Get().(*responseWriter)
+func AcquireResponseWriter(ctx *Context) ResponseWriter {
+	// return rpool.Get().(*responseWriter)
+	var r *responseWriter
+	appPool := ctx.Application().GetResponseWriterPool()
+	if appPool == nil {
+		r = rpool.Get().(*responseWriter)
+	} else {
+		r = appPool.Acquire().(*responseWriter)
+	}
+	return r
 }
 
-func releaseResponseWriter(w ResponseWriter) {
-	rpool.Put(w)
+func releaseResponseWriter(ctx *Context, w ResponseWriter) {
+	// rpool.Put(w)
+	appPool := ctx.Application().GetResponseWriterPool()
+	if appPool == nil {
+		rpool.Put(w)
+	} else {
+		appPool.Release(w)
+	}
 }
 
 // ResponseWriter is the basic response writer,
@@ -192,13 +206,8 @@ func (w *responseWriter) SetWriter(underline http.ResponseWriter) {
 // EndResponse is the last function which is called right before the server sent the final response.
 //
 // Here is the place which we can make the last checks or do a cleanup.
-func (w *responseWriter) EndResponse(pool *ResponseWriterPool) {
-	//releaseResponseWriter(w)
-	if pool == nil {
-		releaseResponseWriter(w)
-	} else {
-		pool.Release(w)
-	}
+func (w *responseWriter) EndResponse(ctx *Context) {
+	releaseResponseWriter(ctx, w)
 }
 
 // Reset clears headers, sets the status code to 200

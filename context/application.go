@@ -58,6 +58,18 @@ type Application interface {
 	// is hijacked by a third-party middleware and the http handler return too fast.
 	GetResponseWriterPool() *ResponseWriterPool
 
+	// GetCompressResponseWriterPool returns the Iris sync.Pool which holds the compress response writers.
+	// Iris automatically releases the compress response writer, so you don't have to use it.
+	// It's only useful to manually release the compress response writer on cases that connection
+	// is hijacked by a third-party middleware and the http handler return too fast.
+	GetCompressResponseWriterPool() *ResponseWriterPool
+
+	// GetResponseRecorderPool returns the Iris sync.Pool which holds the response recorder.
+	// Iris automatically releases the response recorder, so you don't have to use it.
+	// It's only useful to manually release the response recorder on cases that connection
+	// is hijacked by a third-party middleware and the http handler return too fast.
+	GetResponseRecorderPool() *ResponseWriterPool
+
 	// GetContextErrorHandler returns the handler which handles errors
 	// on JSON write failures.
 	GetContextErrorHandler() ErrorHandler

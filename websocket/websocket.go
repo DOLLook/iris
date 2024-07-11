@@ -204,8 +204,7 @@ func Upgrade(ctx *context.Context, idGen IDGenerator, s *neffos.Server) *neffos.
 }
 
 func manualReleaseWithoutResp(ctx *context.Context) {
-	pool := ctx.Application().GetResponseWriterPool()
-	ctx.ResponseWriter().EndResponse(pool)               // relases the response writer (common, recorder & compress).
+	ctx.ResponseWriter().EndResponse(ctx)                // relases the response writer (common, recorder & compress).
 	ctx.Application().GetContextPool().ReleaseLight(ctx) // just releases the context.
 }
 

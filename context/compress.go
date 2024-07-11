@@ -191,6 +191,10 @@ type CompressResponseWriter struct {
 	Level    int
 }
 
+func NewCompressResponseWriter() *CompressResponseWriter {
+	return &CompressResponseWriter{}
+}
+
 var _ ResponseWriter = (*CompressResponseWriter)(nil)
 
 // AcquireCompressResponseWriter returns a CompressResponseWriter from the pool.
@@ -199,13 +203,20 @@ var _ ResponseWriter = (*CompressResponseWriter)(nil)
 //
 // It returns the best candidate among "gzip", "defate", "br", "snappy" and "s2"
 // based on the request's "Accept-Encoding" header value.
-func AcquireCompressResponseWriter(w ResponseWriter, r *http.Request, level int) (*CompressResponseWriter, error) {
+func AcquireCompressResponseWriter(ctx *Context, w ResponseWriter, r *http.Request, level int) (*CompressResponseWriter, error) {
 	encoding, err := GetEncoding(r, AllEncodings)
 	if err != nil {
 		return nil, err
 	}
 
-	v := compressWritersPool.Get().(*CompressResponseWriter)
+	// v := compressWritersPool.Get().(*CompressResponseWriter)
+	var v *CompressResponseWriter
+	appPool := ctx.Application().GetCompressResponseWriterPool()
+	if appPool == nil {
+		v = compressWritersPool.Get().(*CompressResponseWriter)
+	} else {
+		v = appPool.Acquire().(*CompressResponseWriter)
+	}
 
 	if h, ok := w.(http.Hijacker); ok {
 		v.Hijacker = h
@@ -250,8 +261,14 @@ func AcquireCompressResponseWriter(w ResponseWriter, r *http.Request, level int)
 	return v, nil
 }
 
-func releaseCompressResponseWriter(w *CompressResponseWriter) {
-	compressWritersPool.Put(w)
+func releaseCompressResponseWriter(ctx *Context, w *CompressResponseWriter) {
+	// compressWritersPool.Put(w)
+	appPool := ctx.Application().GetCompressResponseWriterPool()
+	if appPool == nil {
+		compressWritersPool.Put(w)
+	} else {
+		appPool.Release(w)
+	}
 }
 
 // FlushResponse flushes any data, closes the underline compress writer
@@ -296,14 +313,9 @@ func (w *CompressResponseWriter) FlushHeaders() {
 }
 
 // EndResponse reeases the writers.
-func (w *CompressResponseWriter) EndResponse(pool *ResponseWriterPool) {
-	w.ResponseWriter.EndResponse(pool)
-	//releaseCompressResponseWriter(w)
-	if pool == nil {
-		releaseCompressResponseWriter(w)
-	} else {
-		pool.Release(w)
-	}
+func (w *CompressResponseWriter) EndResponse(ctx *Context) {
+	w.ResponseWriter.EndResponse(ctx)
+	releaseCompressResponseWriter(ctx, w)
 }
 
 func (w *CompressResponseWriter) Write(p []byte) (int, error) {

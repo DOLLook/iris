@@ -345,7 +345,7 @@ func benchmarkAccessLogAfter(b *testing.B, withLogStruct, async bool) {
 	}
 	ctx.ResetRequest(req)
 	recorder := httptest.NewRecorder()
-	w := context.AcquireResponseWriter()
+	w := context.AcquireResponseWriter(ctx)
 	w.BeginResponse(recorder)
 	ctx.ResetResponseWriter(w)
 
@@ -369,5 +369,5 @@ func benchmarkAccessLogAfter(b *testing.B, withLogStruct, async bool) {
 	if async {
 		wg.Wait()
 	}
-	w.EndResponse(nil)
+	w.EndResponse(ctx)
 }

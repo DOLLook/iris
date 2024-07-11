@@ -7,18 +7,26 @@ import (
 
 // Pool is the context pool, it's used inside router and the framework by itself.
 type Pool struct {
-	pool *sync.Pool
+	pool    *sync.Pool
+	enable  bool
+	newFunc func() any
 }
 
 // New creates and returns a new context pool.
 func New(newFunc func() interface{}) *Pool {
-	return &Pool{pool: &sync.Pool{New: newFunc}}
+	return &Pool{pool: &sync.Pool{New: newFunc}, enable: true, newFunc: newFunc}
 }
 
 // Acquire returns a Context from pool.
 // See Release.
 func (c *Pool) Acquire(w http.ResponseWriter, r *http.Request) *Context {
-	ctx := c.pool.Get().(*Context)
+	// ctx := c.pool.Get().(*Context)
+	var ctx *Context
+	if c.enable {
+		ctx = c.pool.Get().(*Context)
+	} else {
+		ctx = c.newFunc().(*Context)
+	}
 	ctx.BeginRequest(w, r)
 	return ctx
 }
@@ -28,7 +36,12 @@ func (c *Pool) Acquire(w http.ResponseWriter, r *http.Request) *Context {
 func (c *Pool) Release(ctx *Context) {
 	if !ctx.manualRelease {
 		ctx.EndRequest()
-		c.pool.Put(ctx)
+		// c.pool.Put(ctx)
+		if c.enable {
+			c.pool.Put(ctx)
+		} else {
+			// nothing to do
+		}
 	}
 }
 
@@ -38,5 +51,15 @@ func (c *Pool) Release(ctx *Context) {
 //
 // ReleaseLight does a force-put, it does NOT respect the context.DisablePoolRelease.
 func (c *Pool) ReleaseLight(ctx *Context) {
-	c.pool.Put(ctx)
+	// c.pool.Put(ctx)
+	if c.enable {
+		c.pool.Put(ctx)
+	} else {
+		// nothing to do
+	}
+}
+
+// DisablePool disables the pool.
+func (c *Pool) DisablePool() {
+	c.enable = false
 }

@@ -976,6 +976,16 @@ type Configuration struct {
 	//
 	// Defaults to empty map.
 	Other map[string]interface{} `ini:"other" json:"other,omitempty" yaml:"Other" toml:"Other"`
+	// DisableContextPool when is true then the context pool will be disabled.
+	// and it will new context on each request.
+	//
+	// Defaults to false.
+	DisableContextPool bool `ini:"disable_context_pool" json:"disableContextPool,omitempty" yaml:"DisableContextPool" toml:"DisableContextPool"`
+	// DisableResponseWriterPool when is true then the response writer pool will be disabled.
+	// and it will new response writer on each context.
+	//
+	// Defaults to false.
+	DisableResponseWriterPool bool `ini:"disable_response_writer_pool" json:"disableResponseWriterPool,omitempty" yaml:"DisableResponseWriterPool" toml:"DisableResponseWriterPool"`
 }
 
 var _ context.ConfigurationReadOnly = (*Configuration)(nil)
@@ -1186,6 +1196,16 @@ func (c *Configuration) GetOther() map[string]interface{} {
 	return c.Other
 }
 
+// GetDisableContextPool returns the DisableContextPool field.
+func (c *Configuration) GetDisableContextPool() bool {
+	return c.DisableContextPool
+}
+
+// GetDisableResponseWriterPool returns the DisableResponseWriterPool field.
+func (c *Configuration) GetDisableResponseWriterPool() bool {
+	return c.DisableResponseWriterPool
+}
+
 // WithConfiguration sets the "c" values to the framework's configurations.
 //
 // Usage:
@@ -1382,6 +1402,18 @@ func WithConfiguration(c Configuration) Configurator {
 				main.Other[key] = value
 			}
 		}
+
+		if v := c.DisableContextPool; v {
+			main.DisableContextPool = v
+			app.ContextPool.DisablePool()
+		}
+
+		if v := c.DisableResponseWriterPool; v {
+			main.DisableResponseWriterPool = v
+			app.ResponseWriterPool.DisablePool()
+			app.CompressResponseWriterPool.DisablePool()
+			app.ResponseRecorderPool.DisablePool()
+		}
 	}
 }
 
@@ -1459,11 +1491,13 @@ func DefaultConfiguration() Configuration {
 				End:   "198.19.255.255",
 			},
 		},
-		SSLProxyHeaders:     make(map[string]string),
-		HostProxyHeaders:    make(map[string]bool),
-		EnableOptimizations: false,
-		EnableProtoJSON:     false,
-		EnableEasyJSON:      false,
-		Other:               make(map[string]interface{}),
+		SSLProxyHeaders:           make(map[string]string),
+		HostProxyHeaders:          make(map[string]bool),
+		EnableOptimizations:       false,
+		EnableProtoJSON:           false,
+		EnableEasyJSON:            false,
+		Other:                     make(map[string]interface{}),
+		DisableContextPool:        false,
+		DisableResponseWriterPool: false,
 	}
 }

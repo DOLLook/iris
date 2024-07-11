@@ -97,4 +97,9 @@ type ConfigurationReadOnly interface {
 	GetHostProxyHeaders() map[string]bool
 	// GetOther returns the Other field.
 	GetOther() map[string]interface{}
+
+	// GetDisableContextPool returns the DisableContextPool field.
+	GetDisableContextPool() bool
+	// GetDisableResponseWriterPool returns the DisableResponseWriterPool field.
+	GetDisableResponseWriterPool() bool
 }

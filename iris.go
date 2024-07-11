@@ -58,9 +58,11 @@ type Application struct {
 	// routing embedded | exposing APIBuilder's and Router's public API.
 	*router.APIBuilder
 	*router.Router
-	router.HTTPErrorHandler // if Router is Downgraded this is nil.
-	ContextPool             *context.Pool
-	ResponseWriterPool      *context.ResponseWriterPool
+	router.HTTPErrorHandler    // if Router is Downgraded this is nil.
+	ContextPool                *context.Pool
+	ResponseWriterPool         *context.ResponseWriterPool
+	CompressResponseWriterPool *context.ResponseWriterPool
+	ResponseRecorderPool       *context.ResponseWriterPool
 	// See SetContextErrorHandler, defaults to nil.
 	contextErrorHandler context.ErrorHandler
 
@@ -134,6 +136,12 @@ func New() *Application {
 	})
 	app.ResponseWriterPool = context.NewResponseWriterPool(func() interface{} {
 		return context.NewResponseWriter()
+	})
+	app.CompressResponseWriterPool = context.NewResponseWriterPool(func() interface{} {
+		return context.NewCompressResponseWriter()
+	})
+	app.ResponseRecorderPool = context.NewResponseWriterPool(func() interface{} {
+		return context.NewResponseRecorder()
 	})
 
 	context.RegisterApplication(app)
@@ -449,6 +457,22 @@ func (app *Application) GetContextPool() *context.Pool {
 // is hijacked by a third-party middleware and the http handler return too fast.
 func (app *Application) GetResponseWriterPool() *context.ResponseWriterPool {
 	return app.ResponseWriterPool
+}
+
+// GetCompressResponseWriterPool returns the Iris sync.Pool which holds the compress response writers.
+// Iris automatically releases the compress response writer, so you don't have to use it.
+// It's only useful to manually release the compress response writer on cases that connection
+// is hijacked by a third-party middleware and the http handler return too fast.
+func (app *Application) GetCompressResponseWriterPool() *context.ResponseWriterPool {
+	return app.CompressResponseWriterPool
+}
+
+// GetResponseRecorderPool returns the Iris sync.Pool which holds the response recorder.
+// Iris automatically releases the response recorder, so you don't have to use it.
+// It's only useful to manually release the response recorder on cases that connection
+// is hijacked by a third-party middleware and the http handler return too fast.
+func (app *Application) GetResponseRecorderPool() *context.ResponseWriterPool {
+	return app.ResponseRecorderPool
 }
 
 // SetContextErrorHandler can optionally register a handler to handle
