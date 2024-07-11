@@ -24,5 +24,5 @@ func (c *ResponseWriterPool) Acquire() ResponseWriter {
 // Release puts a response writer back to its pool, this function releases its resources.
 // See Acquire.
 func (c *ResponseWriterPool) Release(responseWriter ResponseWriter) {
-	c.pool.Put(responseWriter)
+	// c.pool.Put(responseWriter)
 }
